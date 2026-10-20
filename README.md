@@ -93,8 +93,8 @@ Error: more slices (5) than frames (3) in 1-3
 ## インストール
 
 ```bash
-git clone <this-repo>
-cd frame_slicer
+git clone https://github.com/nokgc333/frame-slicer.git
+cd frame-slicer
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
