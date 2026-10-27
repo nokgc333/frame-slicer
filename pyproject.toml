@@ -18,6 +18,7 @@ dev = [
     "isort>=5.13",
     "mypy>=1.11",
     "pip-audit>=2.7",
+    "vulture>=2.11",
 ]
 
 [project.scripts]
