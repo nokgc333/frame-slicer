@@ -29,8 +29,14 @@ class _Script(BaseHTTPRequestHandler):
     script: list[tuple[int, dict[str, str]]] = []
     requests: list[dict[str, str | None]] = []
 
+    def do_GET(self) -> None:  # noqa: N802 - the name is fixed by BaseHTTPRequestHandler
+        self._answer()
+
     def do_POST(self) -> None:  # noqa: N802 - the name is fixed by BaseHTTPRequestHandler
         self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        self._answer()
+
+    def _answer(self) -> None:
         _Script.requests.append(
             {
                 "authorization": self.headers.get("Authorization"),
@@ -208,3 +214,26 @@ class TestResponseCap:
         _Script.script = []
         with pytest.raises(QueueWatchError, match="larger than"):
             http_post(f"{server}/huge", PAYLOAD, read_limit=10)
+
+
+class TestHttpGet:
+    def test_reads_a_json_object_and_sends_the_token(self, server: str) -> None:
+        from frame_slicer.transport import http_get
+
+        answer = http_get(f"{server}/jobs/1", token="s3cret-token-value")
+        assert answer == {"id": 1, "status": "pending"}
+        assert _Script.requests[0]["authorization"] == "Bearer s3cret-token-value"
+
+    def test_sends_no_idempotency_key_because_it_changes_nothing(self, server: str) -> None:
+        from frame_slicer.transport import http_get
+
+        http_get(f"{server}/jobs/1")
+        assert _Script.requests[0]["key"] is None
+
+    def test_retries_a_503_like_a_post(self, server: str) -> None:
+        from frame_slicer.transport import http_get
+
+        _Script.script = [(503, {}), (200, {})]
+        sleeps = Sleeps()
+        http_get(f"{server}/jobs/1", sleep=sleeps)
+        assert len(_Script.requests) == 2

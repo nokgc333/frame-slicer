@@ -59,7 +59,7 @@ class TestSplit:
     def test_fails_when_the_slice_count_is_missing(self) -> None:
         code, output = run("split", "1-10")
         assert code == 2
-        assert "--slices" in output
+        assert "slice count or a chunk size" in output
 
     def test_fails_when_the_slice_count_is_not_a_number(self) -> None:
         code, _ = run("split", "1-10", "--slices", "many")

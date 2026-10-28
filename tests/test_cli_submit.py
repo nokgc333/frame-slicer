@@ -5,6 +5,7 @@ from click.testing import CliRunner
 
 from frame_slicer.cli import main
 from frame_slicer.errors import QueueWatchError
+from frame_slicer.workflow import Api
 
 
 class FakeQueue:
@@ -19,8 +20,12 @@ class FakeQueue:
         return {"id": 100 + len(self.calls), "status": "pending"}
 
 
+def _no_get(url: str) -> dict[str, Any]:
+    raise AssertionError("submit does not read the queue")
+
+
 def run(queue: FakeQueue | None, *args: str) -> tuple[int, str]:
-    result = CliRunner().invoke(main, ["submit", *args], obj=queue)
+    result = CliRunner().invoke(main, ["submit", *args], obj=Api(queue, _no_get))
     return result.exit_code, result.output
 
 
@@ -43,7 +48,12 @@ class TestSubmit:
         run(queue, *BASE)
         assert queue.calls[0] == (
             "http://localhost:8000/jobs",
-            {"name": "SHOT010_cache_1001-1030", "priority": "normal"},
+            {
+                "name": "SHOT010_cache_1001-1030",
+                "priority": "normal",
+                "frame_start": 1001,
+                "frame_end": 1030,
+            },
         )
 
     def test_uses_the_address_and_priority_it_is_given(self) -> None:
@@ -131,7 +141,7 @@ class TestSubmit:
         assert "submit" in result.output
 
     def test_prints_the_error_on_stderr_and_only_submitted_jobs_on_stdout(self) -> None:
-        result = CliRunner().invoke(main, ["submit", *BASE], obj=FakeQueue(fail_on=2))
+        result = CliRunner().invoke(main, ["submit", *BASE], obj=Api(FakeQueue(fail_on=2), _no_get))
         assert "Error: could not reach the queue" in result.stderr
         assert "1 of 8 jobs submitted" in result.stderr
         assert "Error" not in result.stdout
@@ -146,7 +156,7 @@ class TestQueueAddressAndToken:
         result = CliRunner().invoke(
             main,
             ["submit", *BASE],
-            obj=queue,
+            obj=Api(queue, _no_get),
             env={"QUEUEWATCH_API_URL": "https://queue.example/"},
         )
         assert result.exit_code == 0
@@ -157,7 +167,7 @@ class TestQueueAddressAndToken:
         CliRunner().invoke(
             main,
             ["submit", *BASE, "--api-base-url", "https://flag.example"],
-            obj=queue,
+            obj=Api(queue, _no_get),
             env={"QUEUEWATCH_API_URL": "https://queue.example"},
         )
         assert queue.calls[0][0] == "https://flag.example/jobs"
