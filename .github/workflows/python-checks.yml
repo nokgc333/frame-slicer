@@ -1,0 +1,98 @@
+# A reusable workflow: lint, tests on several operating systems, and a package smoke test.
+# Another repository can call it with `uses: <owner>/<repo>/.github/workflows/python-checks.yml@<ref>`.
+name: Python checks
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        description: The import package (folder) to type-check and measure
+        required: true
+        type: string
+      lint-command:
+        description: Commands for the lint job, after the dev tools are installed
+        required: true
+        type: string
+      coverage-min:
+        description: Minimum test coverage in percent
+        required: false
+        type: number
+        default: 100
+      smoke-command:
+        description: Commands run from outside the checkout, with the built wheel installed
+        required: true
+        type: string
+      os:
+        description: JSON list of runner labels for the test matrix
+        required: false
+        type: string
+        default: '["ubuntu-latest", "macos-latest", "windows-latest"]'
+      python-versions:
+        description: JSON list of Python versions for the test matrix
+        required: false
+        type: string
+        default: '["3.11", "3.12", "3.13"]'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip setuptools
+      - run: pip install -e ".[dev]"
+      - run: ${{ inputs.lint-command }}
+      - run: pip-audit
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        python-version: ${{ fromJSON(inputs.python-versions) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip setuptools
+      - run: pip install -e ".[dev]"
+      - run: pytest --cov=${{ inputs.package }} --cov-report=term-missing --cov-fail-under=${{ inputs.coverage-min }}
+
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip uv
+      - name: The lock file matches pyproject.toml
+        run: uv lock --check
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip build twine
+      - run: python -m build
+      - run: twine check dist/*
+      - name: Install the wheel and run it from another folder
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install dist/*.whl
+          cd "$RUNNER_TEMP"
+          export PATH="$RUNNER_TEMP/venv/bin:$PATH"
+          ${{ inputs.smoke-command }}
