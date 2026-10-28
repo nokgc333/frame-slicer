@@ -1,16 +1,10 @@
 import click
 
-from frame_slicer.queuewatch import (
-    DEFAULT_API_BASE_URL,
-    VALID_PRIORITIES,
-    Post,
-    QueueWatchError,
-    build_jobs,
-    http_post,
-    normalize_base_url,
-    submit_jobs,
-)
+from frame_slicer.errors import QueueWatchError
+from frame_slicer.jobs import VALID_PRIORITIES, build_jobs
+from frame_slicer.queuewatch import DEFAULT_API_BASE_URL, Post, submit_jobs
 from frame_slicer.ranges import FrameRangeError, format_slice, parse_range, split_range
+from frame_slicer.transport import http_post, normalize_base_url
 
 SLICES_OPTION = click.option(
     "--slices", required=True, type=int, help="How many slices to cut the range into."

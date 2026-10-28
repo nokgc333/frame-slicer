@@ -22,5 +22,6 @@ jobs:
       - run: isort --check .
       - run: flake8 frame_slicer/ tests/
       - run: mypy frame_slicer/
+      - run: vulture frame_slicer/ vulture_whitelist.py
       - run: pytest --cov=frame_slicer --cov-report=term-missing --cov-fail-under=80
       - run: pip-audit

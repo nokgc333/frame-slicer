@@ -3,7 +3,7 @@ from typing import Any
 from click.testing import CliRunner
 
 from frame_slicer.cli import main
-from frame_slicer.queuewatch import QueueWatchError
+from frame_slicer.errors import QueueWatchError
 
 
 class FakeQueue:
