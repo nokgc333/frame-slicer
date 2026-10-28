@@ -1,14 +1,22 @@
+import os
+from functools import partial
+
 import click
 
 from frame_slicer.errors import QueueWatchError
 from frame_slicer.jobs import VALID_PRIORITIES, build_jobs
-from frame_slicer.queuewatch import DEFAULT_API_BASE_URL, Post, submit_jobs
+from frame_slicer.queuewatch import DEFAULT_API_BASE_URL, submit_jobs
 from frame_slicer.ranges import FrameRangeError, format_slice, parse_range, split_range
-from frame_slicer.transport import http_post, normalize_base_url
+from frame_slicer.transport import Post, http_post, normalize_base_url
 
 SLICES_OPTION = click.option(
     "--slices", required=True, type=int, help="How many slices to cut the range into."
 )
+
+
+def _token() -> str | None:
+    """The API token from the environment; an empty value means no token."""
+    return os.environ.get("QUEUEWATCH_API_TOKEN", "").strip() or None
 
 
 @click.group()
@@ -48,9 +56,10 @@ def split(frames: str, slices: int) -> None:
 )
 @click.option(
     "--api-base-url",
+    envvar="QUEUEWATCH_API_URL",
     default=DEFAULT_API_BASE_URL,
     show_default=True,
-    help="Address of the QueueWatch API.",
+    help="Address of the QueueWatch API (or set QUEUEWATCH_API_URL).",
 )
 @click.option("--dry-run", is_flag=True, help="Show the jobs without sending them.")
 @click.pass_obj
@@ -67,6 +76,9 @@ def submit(
 
     Each job is named NAME_START-END. QueueWatch only stores the name and the priority;
     it does not read the frame range itself.
+
+    If the QUEUEWATCH_API_TOKEN environment variable is set, it is sent as a Bearer token
+    (never over plain http to another machine, and never printed).
     """
     try:
         jobs = build_jobs(name, split_range(parse_range(frames), slices), priority)
@@ -82,7 +94,7 @@ def submit(
 
     submitted = 0
     try:
-        for result in submit_jobs(base_url, jobs, post or http_post):
+        for result in submit_jobs(base_url, jobs, post or partial(http_post, token=_token())):
             click.echo(f"submitted {result.name} (id={result.id}, status={result.status})")
             submitted += 1
     except QueueWatchError as error:
