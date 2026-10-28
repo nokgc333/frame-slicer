@@ -4,10 +4,32 @@ version = "0.1.0"
 description = "Split a frame range into equal slices and submit them to QueueWatch"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "naokikaneko" }]
+keywords = ["vfx", "render-farm", "frame-range", "houdini", "blender", "queue", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+    "Typing :: Typed",
+]
 dependencies = [
     "click>=8.1.7,<9",
 ]
+
+[project.urls]
+Homepage = "https://github.com/nokgc333/frame-slicer"
+Repository = "https://github.com/nokgc333/frame-slicer"
+Changelog = "https://github.com/nokgc333/frame-slicer/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
@@ -25,11 +47,14 @@ dev = [
 frame-slicer = "frame_slicer.cli:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["frame_slicer*"]
+
+[tool.setuptools.package-data]
+frame_slicer = ["py.typed"]
 
 [tool.mypy]
 strict = true

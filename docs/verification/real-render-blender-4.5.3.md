@@ -43,9 +43,9 @@ submitted cube_7-9 (id=3, status=pending)
 submitted cube_10-12 (id=4, status=pending)
 4 of 4 jobs submitted
 [exit code 0]
-CHECK submit-all-slices PASS 
+CHECK submit-all-slices PASS
 CHECK one-slice-died PASS ['dead', 'success', 'success', 'success']
-CHECK good-slices-have-frames PASS 
+CHECK good-slices-have-frames PASS
 
 == 2. a dependent stage waits for the cache and stops at the dead slice ==
 
@@ -56,8 +56,8 @@ submitted lit_4-6 (id=6, status=pending)
 2 of 4 jobs submitted
 The manifest <work>/render.json keeps the state; run: frame-slicer retry <work>/render.json
 [exit code 1]
-CHECK dependent-stage-blocked PASS 
-CHECK only-ready-slices-were-sent PASS 
+CHECK dependent-stage-blocked PASS
+CHECK only-ready-slices-were-sent PASS
 
 == 3. the fault is fixed; retry brings back only the dead slice ==
 
@@ -68,8 +68,8 @@ requeued cube_7-9 (id=3)
 kept cube_10-12 (id=4, status=success)
 4 of 4 jobs submitted
 [exit code 0]
-CHECK retry-requeued-the-dead-slice PASS 
-CHECK retried-slice-has-frames PASS 
+CHECK retry-requeued-the-dead-slice PASS
+CHECK retried-slice-has-frames PASS
 CHECK no-duplicate-jobs PASS total=6
 
 == 4. the dependent stage continues now that the cache is whole ==
@@ -81,7 +81,7 @@ submitted lit_7-9 (id=7, status=pending)
 submitted lit_10-12 (id=8, status=pending)
 4 of 4 jobs submitted
 [exit code 0]
-CHECK dependent-stage-completed PASS 
+CHECK dependent-stage-completed PASS
 CHECK every-job-wrote-its-frames PASS [3, 3, 3, 3, 3, 3, 3, 3]
 
 == 5. the same range as render commands (printed, not run) ==
