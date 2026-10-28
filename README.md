@@ -2,6 +2,10 @@
 
 フレーム範囲をスライスに分けて、1 スライスごとに 1 ジョブとして QueueWatch に投入する CLI ツールです。失敗したスライスだけの再投入、前段（キャッシュ）の完了待ち、レンダーコマンドの生成もできます。
 
+> **English summary.** frame-slicer cuts a frame range into slices (by count or by size, with stepped and multiple ranges, heavy frames first) and submits one [QueueWatch](https://github.com/nokgc333/queuewatch) job per slice, each carrying its frame range and scene. A manifest records every submission, so `retry` can bring back only the failed slices under the same job id (no duplicates), and `submit --depends-on` holds a render stage back until the same frames of a cache stage succeeded. `commands` prints Blender, husk or hbatch command lines (it never runs them). The transport uses only the standard library: timeouts, a response size limit, retries only for failures that leave no job behind, a Bearer token that is sent over https or to localhost only, and no way to switch off TLS verification. Verified against a real QueueWatch worker running Blender 4.5.3; 254 tests at 100% coverage; CI on Ubuntu, macOS and Windows with Python 3.11 to 3.13.
+
+![The output of split, submit --dry-run and commands](docs/images/demo.svg)
+
 ## 目的・背景
 
 キャッシュの書き出しのように、フレーム同士が独立した処理は、フレーム範囲を分けて並列に流せます。
@@ -155,6 +159,23 @@ $ frame-slicer submit 1-120 --chunk-size 30 --name render --scene shot.blend \
 
 後段は、同じフレームの前段が成功するまで送られません。
 
+## 構成
+
+```mermaid
+flowchart LR
+    CLI["cli.py<br/>(Click)"] --> R["ranges.py<br/>分割・解析"]
+    CLI --> J["jobs.py<br/>ジョブの生成・検査"]
+    CLI --> E["emit.py<br/>コマンドの生成"]
+    CLI --> W["workflow.py<br/>投入・再投入・待ち"]
+    W --> M["manifest.py<br/>投入結果の記録"]
+    W --> T["transport.py<br/>HTTP・再送・トークン"]
+    T --> Q[("QueueWatch<br/>API")]
+    M --> F[("manifest.json")]
+```
+
+- 計算（`ranges` / `jobs` / `emit`）は、外部に依存しない関数です。通信とファイルは、`transport` と `manifest` に閉じています。
+- 仕様は [docs/spec.md](docs/spec.md)、設計判断は [docs/adr/](docs/adr/README.md)（5 本）に残しています。
+
 ## 技術スタック
 
 - Python 3.11+
@@ -211,7 +232,7 @@ QueueWatch への投入は、ローカルの簡易サーバーに対する実際
 - QueueWatch は `Idempotency-Key` をまだ解釈しません。`--manifest` を付けない `submit` を 2 回実行すると、ジョブが二重に作られます。`--manifest` を付ければ、すでにあるファイルには書かないので、2 回目は止まります（続きは `retry`）。1 回の通信の再送では増えません。
 - `retry` は前段の完了を待ちません（待つのは `submit --depends-on` の間だけ）。
 - 実ワーカーでの検証は、Blender 4.5.3 だけです。`hbatch` / `husk` のコマンドは、フラグを各ツールの `--help` で確認しましたが、実際には実行していません。
-- Windows での動作は、確認していません。
+- 動作は、CI で Ubuntu・macOS・Windows の 3 OS × Python 3.11〜3.13 で確認しています（実ワーカーでの検証は macOS のみ）。`commands` が出す引用符は、POSIX シェルの形です。
 
 ## ライセンス
 
