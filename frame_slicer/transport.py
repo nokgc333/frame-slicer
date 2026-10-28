@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 from frame_slicer.errors import QueueWatchError
 
+DEFAULT_API_BASE_URL = "http://localhost:8000"
 TIMEOUT_SECONDS = 5
 MAX_RESPONSE_BYTES = 1_000_000
 MAX_ATTEMPTS = 4
@@ -24,6 +25,7 @@ LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1")
 _CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")
 
 Post = Callable[[str, dict[str, Any]], dict[str, Any]]
+Get = Callable[[str], dict[str, Any]]
 
 
 class _Transient(Exception):
@@ -113,6 +115,37 @@ def _parse_answer(body: bytes, url: str) -> dict[str, Any]:
     return answer
 
 
+def _request(
+    method: str,
+    url: str,
+    payload: dict[str, Any] | None,
+    token: str | None,
+    read_limit: int,
+    sleep: Callable[[float], None],
+    jitter: Callable[[], float],
+) -> dict[str, Any]:
+    _check_token(url, token)
+    headers: dict[str, str] = {}
+    data = None
+    if payload is not None:
+        headers["Content-Type"] = "application/json"
+        headers["Idempotency-Key"] = idempotency_key(url, payload)
+        data = json.dumps(payload).encode("utf-8")
+    if token is not None:
+        headers["Authorization"] = f"Bearer {token}"
+
+    for attempt in range(MAX_ATTEMPTS):
+        request = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            return _parse_answer(_send_once(request, url, read_limit), url)
+        except _Transient as error:
+            if attempt == MAX_ATTEMPTS - 1:
+                raise QueueWatchError(f"{error} (gave up after {MAX_ATTEMPTS} attempts)") from error
+            wait = error.retry_after
+            sleep(backoff_delay(attempt, jitter) if wait is None else wait)
+    raise AssertionError("unreachable")  # pragma: no cover - the loop always returns or raises
+
+
 def http_post(
     url: str,
     payload: dict[str, Any],
@@ -128,22 +161,16 @@ def http_post(
     with a capped exponential backoff. A slow answer is not: the queue may already hold the job.
     Every attempt carries the same Idempotency-Key. Every failure becomes a QueueWatchError.
     """
-    _check_token(url, token)
-    headers = {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotency_key(url, payload),
-    }
-    if token is not None:
-        headers["Authorization"] = f"Bearer {token}"
-    data = json.dumps(payload).encode("utf-8")
+    return _request("POST", url, payload, token, read_limit, sleep, jitter)
 
-    for attempt in range(MAX_ATTEMPTS):
-        request = urllib.request.Request(url, data=data, headers=headers, method="POST")
-        try:
-            return _parse_answer(_send_once(request, url, read_limit), url)
-        except _Transient as error:
-            if attempt == MAX_ATTEMPTS - 1:
-                raise QueueWatchError(f"{error} (gave up after {MAX_ATTEMPTS} attempts)") from error
-            wait = error.retry_after
-            sleep(backoff_delay(attempt, jitter) if wait is None else wait)
-    raise AssertionError("unreachable")  # pragma: no cover - the loop always returns or raises
+
+def http_get(
+    url: str,
+    *,
+    token: str | None = None,
+    read_limit: int = MAX_RESPONSE_BYTES,
+    sleep: Callable[[float], None] = time.sleep,
+    jitter: Callable[[], float] = random.random,
+) -> dict[str, Any]:
+    """GET a JSON object, with the same limits, retries and token rules as http_post."""
+    return _request("GET", url, None, token, read_limit, sleep, jitter)
