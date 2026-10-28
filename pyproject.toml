@@ -34,7 +34,7 @@ Changelog = "https://github.com/nokgc333/frame-slicer/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 dev = [
     "pytest>=9.0.3",
-    "pytest-cov>=5.0,<6",
+    "pytest-cov>=5.0,<8",
     "black>=24.0",
     "flake8>=7.1",
     "isort>=5.13",
