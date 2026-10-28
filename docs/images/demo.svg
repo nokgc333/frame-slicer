@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="653" height="452" viewBox="0 0 653 452" role="img" aria-label="Output of the frame-slicer split, submit --dry-run and commands commands">
+<rect width="653" height="452" rx="8" fill="#0d1117"/>
+<g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" xml:space="preserve" style="white-space: pre">
+<text x="16" y="31" fill="#7ee787">$ frame-slicer split 1001-1240 --slices 4</text>
+<text x="16" y="51" fill="#e6edf3">slice 1/4  1001-1060  (60 frames)</text>
+<text x="16" y="71" fill="#e6edf3">slice 2/4  1061-1120  (60 frames)</text>
+<text x="16" y="91" fill="#e6edf3">slice 3/4  1121-1180  (60 frames)</text>
+<text x="16" y="111" fill="#e6edf3">slice 4/4  1181-1240  (60 frames)</text>
+<text x="16" y="131" fill="#e6edf3"></text>
+<text x="16" y="151" fill="#7ee787">$ frame-slicer split 1-10 --chunk-size 4</text>
+<text x="16" y="171" fill="#e6edf3">slice 1/3  1-4  (4 frames)</text>
+<text x="16" y="191" fill="#e6edf3">slice 2/3  5-8  (4 frames)</text>
+<text x="16" y="211" fill="#e6edf3">slice 3/3  9-10  (2 frames)</text>
+<text x="16" y="231" fill="#e6edf3"></text>
+<text x="16" y="251" fill="#7ee787">$ frame-slicer submit 1001-1240 --slices 4 --name SHOT010_cache --dry-run</text>
+<text x="16" y="271" fill="#e6edf3">[dry-run] SHOT010_cache_1001-1060 (priority=normal)</text>
+<text x="16" y="291" fill="#e6edf3">[dry-run] SHOT010_cache_1061-1120 (priority=normal)</text>
+<text x="16" y="311" fill="#e6edf3">[dry-run] SHOT010_cache_1121-1180 (priority=normal)</text>
+<text x="16" y="331" fill="#e6edf3">[dry-run] SHOT010_cache_1181-1240 (priority=normal)</text>
+<text x="16" y="351" fill="#e6edf3">[dry-run] 4 jobs would be submitted to http://localhost:8000</text>
+<text x="16" y="371" fill="#e6edf3"></text>
+<text x="16" y="391" fill="#7ee787">$ frame-slicer commands 1-12 --slices 2 --tool blender --scene cube.blend</text>
+<text x="16" y="411" fill="#e6edf3">blender -b cube.blend -noaudio -s 1 -e 6 -a</text>
+<text x="16" y="431" fill="#e6edf3">blender -b cube.blend -noaudio -s 7 -e 12 -a</text>
+</g>
+</svg>
