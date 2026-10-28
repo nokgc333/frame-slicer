@@ -122,14 +122,18 @@ class TestHttpPost:
 
     def test_reports_a_server_that_cannot_be_reached(self) -> None:
         with pytest.raises(QueueWatchError, match="could not reach"):
-            http_post("http://127.0.0.1:1/jobs", {"name": "A", "priority": "normal"})
+            http_post(
+                "http://127.0.0.1:1/jobs", {"name": "A", "priority": "normal"}, sleep=lambda _: None
+            )
 
     def test_names_the_address_in_the_unreachable_error(self) -> None:
         with pytest.raises(QueueWatchError, match="127.0.0.1:1"):
-            http_post("http://127.0.0.1:1/jobs", {"name": "A", "priority": "normal"})
+            http_post(
+                "http://127.0.0.1:1/jobs", {"name": "A", "priority": "normal"}, sleep=lambda _: None
+            )
 
     def test_reads_only_a_limited_part_of_an_answer(self, server: str) -> None:
-        with pytest.raises(QueueWatchError, match="JSON"):
+        with pytest.raises(QueueWatchError, match="larger than"):
             http_post(f"{server}/huge/jobs", {"name": "A", "priority": "normal"})
 
     def test_gives_up_on_a_server_that_answers_too_slowly(

@@ -1,14 +1,12 @@
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any
 
 from frame_slicer.errors import QueueWatchError
 from frame_slicer.jobs import JobRequest
-from frame_slicer.transport import http_post, normalize_base_url
+from frame_slicer.transport import Post, http_post, normalize_base_url
 
 DEFAULT_API_BASE_URL = "http://localhost:8000"
-
-Post = Callable[[str, dict[str, Any]], dict[str, Any]]
 
 
 @dataclass(frozen=True)

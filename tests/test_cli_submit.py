@@ -1,5 +1,6 @@
 from typing import Any
 
+import pytest
 from click.testing import CliRunner
 
 from frame_slicer.cli import main
@@ -137,3 +138,69 @@ class TestSubmit:
         assert result.stdout.splitlines() == [
             "submitted SHOT010_cache_1001-1030 (id=101, status=pending)"
         ]
+
+
+class TestQueueAddressAndToken:
+    def test_reads_the_address_from_the_environment(self) -> None:
+        queue = FakeQueue()
+        result = CliRunner().invoke(
+            main,
+            ["submit", *BASE],
+            obj=queue,
+            env={"QUEUEWATCH_API_URL": "https://queue.example/"},
+        )
+        assert result.exit_code == 0
+        assert queue.calls[0][0] == "https://queue.example/jobs"
+
+    def test_an_option_wins_over_the_environment(self) -> None:
+        queue = FakeQueue()
+        CliRunner().invoke(
+            main,
+            ["submit", *BASE, "--api-base-url", "https://flag.example"],
+            obj=queue,
+            env={"QUEUEWATCH_API_URL": "https://queue.example"},
+        )
+        assert queue.calls[0][0] == "https://flag.example/jobs"
+
+    def test_hands_the_token_from_the_environment_to_the_transport(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        seen: list[str | None] = []
+
+        def fake_http_post(
+            url: str, payload: dict[str, Any], *, token: str | None = None
+        ) -> dict[str, Any]:
+            seen.append(token)
+            return {"id": 1, "status": "pending"}
+
+        monkeypatch.setattr("frame_slicer.cli.http_post", fake_http_post)
+        result = CliRunner().invoke(
+            main,
+            ["submit", "1-4", "--slices", "2", "--name", "A"],
+            env={"QUEUEWATCH_API_TOKEN": "s3cret-token-value"},
+        )
+        assert result.exit_code == 0
+        assert seen == ["s3cret-token-value", "s3cret-token-value"]
+        assert "s3cret-token-value" not in result.output
+
+    def test_an_empty_token_means_no_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: list[str | None] = []
+
+        def fake_http_post(
+            url: str, payload: dict[str, Any], *, token: str | None = None
+        ) -> dict[str, Any]:
+            seen.append(token)
+            return {"id": 1, "status": "pending"}
+
+        monkeypatch.setattr("frame_slicer.cli.http_post", fake_http_post)
+        CliRunner().invoke(
+            main,
+            ["submit", "1-2", "--slices", "1", "--name", "A"],
+            env={"QUEUEWATCH_API_TOKEN": "  "},
+        )
+        assert seen == [None]
+
+    def test_has_no_way_to_turn_off_certificate_checks(self) -> None:
+        result = CliRunner().invoke(main, ["submit", "--help"])
+        assert "insecure" not in result.output.lower()
+        assert "verify" not in result.output.lower()
