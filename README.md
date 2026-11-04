@@ -1,5 +1,7 @@
 # FrameSlicer
 
+[![CI](https://github.com/nokgc333/frame-slicer/actions/workflows/ci.yml/badge.svg)](https://github.com/nokgc333/frame-slicer/actions/workflows/ci.yml)
+
 フレーム範囲をスライスに分けて、1 スライスごとに 1 ジョブとして QueueWatch に投入する CLI ツールです。失敗したスライスだけの再投入、前段（キャッシュ）の完了待ち、レンダーコマンドの生成もできます。
 
 > **English summary.** frame-slicer cuts a frame range into slices (by count or by size, with stepped and multiple ranges, heavy frames first) and submits one [QueueWatch](https://github.com/nokgc333/queuewatch) job per slice, each carrying its frame range and scene. A manifest records every submission, so `retry` can bring back only the failed slices under the same job id (no duplicates), and `submit --depends-on` holds a render stage back until the same frames of a cache stage succeeded. `commands` prints Blender, husk or hbatch command lines (it never runs them). The transport uses only the standard library: timeouts, a response size limit, retries only for failures that leave no job behind, a Bearer token that is sent over https or to localhost only, and no way to switch off TLS verification. Verified against a real QueueWatch worker running Blender 4.5.3; 254 tests at 100% coverage; CI on Ubuntu, macOS and Windows with Python 3.11 to 3.13.
